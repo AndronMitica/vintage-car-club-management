@@ -2,7 +2,6 @@ package com.vintage.vcc.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vintage.vcc.exceptions.MemberCreateException;
-import com.vintage.vcc.exceptions.MemberDeleteByIdException;
 import com.vintage.vcc.exceptions.MemberNotFoundException;
 import com.vintage.vcc.model.dtos.MemberDTO;
 import com.vintage.vcc.model.entities.Member;

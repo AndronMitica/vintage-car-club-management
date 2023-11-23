@@ -10,7 +10,6 @@ public class ErrorResponse {
     private final String message;
     private final Date timestamp;
 
-    // Constructor
     public ErrorResponse(int status, String message, Date timestamp) {
         this.status = status;
         this.message = message;

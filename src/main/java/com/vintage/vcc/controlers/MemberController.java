@@ -22,6 +22,8 @@ public class MemberController {
 
     @PostMapping("/members")
     public ResponseEntity<MemberDTO> createMember(@Valid @RequestBody MemberDTO memberDTO) {
+        System.out.println("Reached createMember endpoint");
+
         return ResponseEntity.ok(memberService.createMember(memberDTO));
     }
 
