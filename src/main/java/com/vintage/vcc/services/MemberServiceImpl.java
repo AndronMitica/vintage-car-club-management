@@ -6,6 +6,7 @@ import com.vintage.vcc.exceptions.MemberNotFoundException;
 import com.vintage.vcc.model.dtos.MemberDTO;
 import com.vintage.vcc.model.entities.Member;
 import com.vintage.vcc.repositories.MemberRepository;
+import com.vintage.vcc.repositories.VehicleRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,19 @@ import java.util.Optional;
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
+    private final VehicleRepository vehicleRepository;
     private final ObjectMapper objectMapper;
+    private final VehicleService vehicleService;
 
-    public MemberServiceImpl(MemberRepository memberRepository, ObjectMapper objectMapper) {
+    public MemberServiceImpl(MemberRepository memberRepository
+            , VehicleRepository vehicleRepository
+            , ObjectMapper objectMapper
+            , VehicleService vehicleService) {
         this.memberRepository = memberRepository;
+        this.vehicleRepository = vehicleRepository;
         this.objectMapper = objectMapper;
+        this.vehicleService = vehicleService;
     }
-
     @Override
     public MemberDTO createMember(MemberDTO memberDTO) throws MemberCreateException {
         try {
@@ -35,18 +42,38 @@ public class MemberServiceImpl implements MemberService {
 
             return objectMapper.convertValue(memberResponseEntity, MemberDTO.class);
         } catch (Exception ex) {
+            log.error("Failed to create member: {}", ex.getMessage());
             throw new MemberCreateException("Failed to create member: " + ex.getMessage());
         }
     }
-
     @Override
     public List<MemberDTO> getAllMembers() {
-        List<Member> membersEntityList = memberRepository.findAll(Sort.by("memberId"));
+        try {
+            List<Member> membersEntityList = memberRepository.findAll(Sort.by("memberId"));
         log.info("The list of members was retrieved, count {}", membersEntityList.size());
 
         return membersEntityList.stream()
                 .map(memberEntity -> objectMapper.convertValue(memberEntity, MemberDTO.class))
                 .toList();
+    }catch (Exception ex) {
+            log.error("Failed to retrieve all members: {}", ex.getMessage());
+            throw new MemberNotFoundException("Failed to retrieve members: " + ex.getMessage());
+        }
+    }
+    @Override
+    public MemberDTO getMemberById(Long id) throws MemberNotFoundException {
+        try {
+            Optional<Member> optionalMember = memberRepository.findById(id);
+            if (optionalMember.isPresent()) {
+                Member memberEntity = optionalMember.get();
+                return objectMapper.convertValue(memberEntity, MemberDTO.class);
+            }
+            log.info("Member with id: {} was not found", id);
+            throw new MemberNotFoundException("Member with id: " + id + " not found");
+        } catch (Exception ex) {
+            log.error("Failed to retrieve member: {}", ex.getMessage());
+            throw new MemberNotFoundException("Failed to retrieve member: " + ex.getMessage());
+        }
     }
 
     @Override
@@ -62,10 +89,10 @@ public class MemberServiceImpl implements MemberService {
             log.info("Member with id: {} was not found", id);
             return null;
         } catch (Exception ex) {
+            log.error("Failed to update member: {}", ex.getMessage());
             throw new MemberNotFoundException("Failed to update member: " + ex.getMessage());
         }
     }
-
     @Override
     public MemberDTO deleteMemberById(Long id) throws MemberNotFoundException {
         try {
@@ -80,6 +107,7 @@ public class MemberServiceImpl implements MemberService {
             log.info("Member with id: {} was not founded", id);
             return null;
         } catch (Exception ex) {
+            log.error("Failed to delete member: {}", ex.getMessage());
             throw new MemberNotFoundException("Failed to delete member: " + ex.getMessage());
         }
     }

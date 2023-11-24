@@ -37,6 +37,19 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(VehicleNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<Object> handleVehicleNotFoundException(VehicleNotFoundException ex) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(VehicleCreateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Object> hadleVehicleCreateExceprion(VehicleCreateException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+
     private ResponseEntity<Object> buildErrorResponse(HttpStatus status, String message) {
         ErrorResponse errorResponse = new ErrorResponse(status.value(), message, new Date());
         return ResponseEntity.status(status).body(errorResponse);
