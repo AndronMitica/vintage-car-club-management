@@ -1,13 +1,13 @@
 package com.vintage.vcc.controlers;
 
 import com.vintage.vcc.model.dtos.VehicleDTO;
-import com.vintage.vcc.model.entities.Vehicle;
 import com.vintage.vcc.services.VehicleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/vintage/")
@@ -26,6 +26,15 @@ public class VehicleController {
     @GetMapping("/vehicles")
     public List<VehicleDTO> getAllVehicles() {
         return vehicleService.getAllVehicles();
+    }
+
+    @PutMapping("/vehicles/{licensePlate}")
+    public ResponseEntity<VehicleDTO> updateVehicleByLicensePlate(
+            @PathVariable @Valid String licensePlate,
+            @RequestBody @Valid VehicleDTO vehicleDTO) {
+        Optional<VehicleDTO> vehicleDTOResponse = Optional.ofNullable(vehicleService.updateVehicleByLicensePlate(licensePlate, vehicleDTO));
+        return vehicleDTOResponse
+                .map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/vehicles/{licensePlate}")

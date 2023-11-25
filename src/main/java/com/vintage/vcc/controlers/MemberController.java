@@ -54,4 +54,13 @@ public class MemberController {
         return memberDTOResponse
                 .map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+    @PutMapping("/members/{id}/vehicles/{licensePlate}")
+    public ResponseEntity<String> assignVehicleToMember(
+            @PathVariable Long id,
+            @PathVariable String licensePlate
+    ) {
+        memberService.assignVehicleToMember(id, licensePlate);
+        return ResponseEntity.ok("Vehicle with licence plate " + licensePlate + " added to list of user with id " + id);
+    }
 }
