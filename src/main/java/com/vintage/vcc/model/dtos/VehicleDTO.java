@@ -11,6 +11,8 @@ import java.util.List;
 @Data
 public class VehicleDTO implements Serializable {
 
+    private List<MemberDTO> owners;
+
     @NotBlank(message = "License plate field cannot be blank")
     private String licensePlate;
 
@@ -22,4 +24,10 @@ public class VehicleDTO implements Serializable {
 
     @NotNull(message = "Year field cannot be null")
     private int year;
+
+    public void setMember(MemberDTO memberDTO) {
+    }
+
+    public void setOwner(MemberDTO memberDTO) {
+    }
 }

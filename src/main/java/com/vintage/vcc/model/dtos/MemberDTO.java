@@ -10,6 +10,8 @@ import java.util.List;
 @Data
 public class MemberDTO implements Serializable {
 
+    private List<VehicleDTO> vehicles;
+
     private Long memberId;
 
     @NotEmpty(message = "First name field cannot be empty.")

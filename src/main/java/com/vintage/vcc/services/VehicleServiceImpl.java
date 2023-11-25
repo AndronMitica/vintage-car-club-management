@@ -3,7 +3,9 @@ package com.vintage.vcc.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vintage.vcc.exceptions.VehicleCreateException;
 import com.vintage.vcc.exceptions.VehicleNotFoundException;
+import com.vintage.vcc.model.dtos.MemberDTO;
 import com.vintage.vcc.model.dtos.VehicleDTO;
+import com.vintage.vcc.model.entities.Member;
 import com.vintage.vcc.model.entities.Vehicle;
 import com.vintage.vcc.repositories.MemberRepository;
 import com.vintage.vcc.repositories.VehicleRepository;
@@ -45,19 +47,31 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
-    public List<VehicleDTO> getAllVehicles() {
+    public VehicleDTO updateVehicleByLicensePlate(String licensePlate, VehicleDTO vehicleDTO) {
         try {
-            List<Vehicle> vehicleEntityList = vehicleRepository.findAll(Sort.by("licensePlate").ascending());
-            log.info("The list of vehicle was retrived, count {}", vehicleEntityList.size());
+            Optional<Vehicle> vehicleOptional = Optional.ofNullable(vehicleRepository.findByLicensePlate(licensePlate));
 
-            return vehicleEntityList.stream()
-                    .map(vehicleEntity -> objectMapper.convertValue(vehicleEntity, VehicleDTO.class))
-                    .toList();
+            if (vehicleOptional.isPresent()) {
+                Vehicle existingVehicle = vehicleOptional.get();
+
+                existingVehicle.setMake(vehicleDTO.getMake());
+                existingVehicle.setModel(vehicleDTO.getModel());
+                existingVehicle.setYear(vehicleDTO.getYear());
+
+                Vehicle updatedVehicle = vehicleRepository.save(existingVehicle);
+
+                log.info("Vehicle with license plate: {} was updated ", licensePlate);
+                return objectMapper.convertValue(updatedVehicle, VehicleDTO.class);
+            }
+
+            log.info("Vehicle with license plate: {} was not found", licensePlate);
+            return null;
         } catch (Exception ex) {
-            log.error("Failed to retrieve all vehicles: {}", ex.getMessage());
-            throw new VehicleNotFoundException("Failed to retrieve vehicles: " + ex.getMessage());
+            log.error("Failed to update vehicle: {}", ex.getMessage());
+            throw new VehicleNotFoundException("Failed to update vehicle: " + ex.getMessage());
         }
     }
+
 
     @Transactional
     @Override
@@ -108,5 +122,53 @@ public class VehicleServiceImpl implements VehicleService {
             log.error("Failed to retrieve vehicle: {}", ex.getMessage());
             throw new VehicleNotFoundException("Failed to retrieve vehicle: " + ex.getMessage());
         }
+    }
+
+    @Override
+    public List<VehicleDTO> getAllVehicles() {
+        try {
+            List<Vehicle> vehicleEntityList = vehicleRepository.findAll(Sort.by("licensePlate").ascending());
+            log.info("The list of vehicles was retrieved, count {}", vehicleEntityList.size());
+
+            return vehicleEntityList.stream()
+                    .map(this::mapVehicleToDTOWithMembers)
+                    .toList();
+        } catch (Exception ex) {
+            log.error("Failed to retrieve all vehicles: {}", ex.getMessage());
+            throw new VehicleNotFoundException("Failed to retrieve vehicles: " + ex.getMessage());
+        }
+    }
+    private VehicleDTO mapVehicleToDTOWithMembers(Vehicle vehicle) {
+        VehicleDTO vehicleDTO = mapVehicleToDTO(vehicle);
+
+        List<MemberDTO> memberDTOs = mapMembersToDTOs(vehicle.getOwners());
+        vehicleDTO.setOwners(memberDTOs);
+        return vehicleDTO;
+    }
+
+    private MemberDTO mapMemberToDTO(Member member) {
+        MemberDTO memberDTO = new MemberDTO();
+        memberDTO.setMemberId(member.getMemberId());
+        memberDTO.setFirstName(member.getFirstName());
+        memberDTO.setLastName(member.getLastName());
+        memberDTO.setEmail(member.getEmail());
+        memberDTO.setGender(member.getGender());
+        memberDTO.setCity(member.getCity());
+        return memberDTO;
+    }
+
+    private List<MemberDTO> mapMembersToDTOs(List<Member> members) {
+        return members.stream()
+                .map(this::mapMemberToDTO)
+                .toList();
+    }
+
+    private VehicleDTO mapVehicleToDTO(Vehicle vehicle) {
+        VehicleDTO vehicleDTO = new VehicleDTO();
+        vehicleDTO.setLicensePlate(vehicle.getLicensePlate());
+        vehicleDTO.setMake(vehicle.getMake());
+        vehicleDTO.setModel(vehicle.getModel());
+        vehicleDTO.setYear(vehicle.getYear());
+        return vehicleDTO;
     }
 }
