@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/vintage/")
+@RequestMapping("/api")
 public class VehicleController {
     private final VehicleService vehicleService;
 

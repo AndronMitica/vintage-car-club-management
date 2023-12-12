@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     Vehicle findByLicensePlate(String licensePlate);
+    boolean existsByLicensePlate(String licensePlate);
 
     @Query(value = "SELECT * FROM vehicles v " +
             "WHERE (:licensePlate IS NULL OR v.license_plate = :licensePlate) " +

@@ -32,111 +32,70 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
-    public VehicleDTO createVehicle(VehicleDTO vehicleDTO) throws VehicleCreateException {
-        try {
-        Vehicle vehicleEntity = objectMapper.convertValue(vehicleDTO, Vehicle.class);
+    public VehicleDTO createVehicle(VehicleDTO vehicleDTO) {
+        String licensePlate = vehicleDTO.getLicensePlate();
 
-        Vehicle vehicleResponseEntity = vehicleRepository.save(vehicleEntity);
-        log.info("Vehicle with license plate: {} ", vehicleResponseEntity.getLicensePlate());
-
-        return objectMapper.convertValue(vehicleResponseEntity, VehicleDTO.class);
-    } catch (Exception ex) {
-            log.error("Failed to create member: {}", ex.getMessage());
-            throw new VehicleCreateException("Failed to create vehicle: " + ex.getMessage());
+        if (vehicleRepository.existsByLicensePlate(licensePlate)) {
+            throw new VehicleCreateException("Vehicle with license plate '" + licensePlate + "' already exists");
         }
+        return Optional.of(objectMapper.convertValue(vehicleDTO, Vehicle.class))
+                .map(vehicleRepository::save)
+                .map(vehicleResponseEntity -> {
+                    log.info("Vehicle with license plate: {} ", vehicleResponseEntity.getLicensePlate());
+                    return objectMapper.convertValue(vehicleResponseEntity, VehicleDTO.class);
+                })
+                .orElseThrow(() -> new VehicleCreateException("Failed to create vehicle"));
     }
-
     @Override
     public VehicleDTO updateVehicleByLicensePlate(String licensePlate, VehicleDTO vehicleDTO) {
-        try {
-            Optional<Vehicle> vehicleOptional = Optional.ofNullable(vehicleRepository.findByLicensePlate(licensePlate));
+        return Optional.ofNullable(vehicleRepository.findByLicensePlate(licensePlate))
+                .map(existingVehicle -> {
+                    existingVehicle.setMake(vehicleDTO.getMake());
+                    existingVehicle.setModel(vehicleDTO.getModel());
+                    existingVehicle.setYear(vehicleDTO.getYear());
 
-            if (vehicleOptional.isPresent()) {
-                Vehicle existingVehicle = vehicleOptional.get();
+                    Vehicle updatedVehicle = vehicleRepository.save(existingVehicle);
 
-                existingVehicle.setMake(vehicleDTO.getMake());
-                existingVehicle.setModel(vehicleDTO.getModel());
-                existingVehicle.setYear(vehicleDTO.getYear());
-
-                Vehicle updatedVehicle = vehicleRepository.save(existingVehicle);
-
-                log.info("Vehicle with license plate: {} was updated ", licensePlate);
-                return objectMapper.convertValue(updatedVehicle, VehicleDTO.class);
-            }
-
-            log.info("Vehicle with license plate: {} was not found", licensePlate);
-            return null;
-        } catch (Exception ex) {
-            log.error("Failed to update vehicle: {}", ex.getMessage());
-            throw new VehicleNotFoundException("Failed to update vehicle: " + ex.getMessage());
-        }
+                    log.info("Vehicle with license plate: {} was updated", licensePlate);
+                    return objectMapper.convertValue(updatedVehicle, VehicleDTO.class);
+                })
+                .orElseThrow(() -> new VehicleNotFoundException("Vehicle with license plate: " + licensePlate + " not found"));
     }
-
-
     @Transactional
     @Override
-    public VehicleDTO deleteVehicleByLicensePlate(String licensePlate) throws VehicleNotFoundException {
-        try {
-            Optional<Vehicle> vehicleOptional = Optional.ofNullable(vehicleRepository.findByLicensePlate(licensePlate));
-
-            if (vehicleOptional.isPresent()) {
-                VehicleDTO vehicleDTO = objectMapper.convertValue(vehicleOptional, VehicleDTO.class);
-                vehicleRepository.deleteByLicensePlate(licensePlate);
-                log.info("Vehicle with license plate: {} was deleted ", licensePlate);
-                return vehicleDTO;
-            }
-            log.info("Vehicle with license plate: {} was not found", licensePlate);
-            return null;
-        } catch (Exception ex) {
-            log.error("Failed to delete vehicle: {}", ex.getMessage());
-            throw new VehicleNotFoundException("Failed to delete vehicle: " + ex.getMessage());
-        }
+    public VehicleDTO deleteVehicleByLicensePlate(String licensePlate) {
+        return Optional.ofNullable(vehicleRepository.findByLicensePlate(licensePlate))
+                .map(vehicle -> {
+                    VehicleDTO vehicleDTO = objectMapper.convertValue(vehicle, VehicleDTO.class);
+                    vehicleRepository.deleteByLicensePlate(licensePlate);
+                    log.info("Vehicle with license plate: {} was deleted", licensePlate);
+                    return vehicleDTO;
+                })
+                .orElseThrow(() -> new VehicleNotFoundException("Vehicle with license plate: " + licensePlate + " not found"));
     }
-
-
     @Override
     public VehicleDTO getVehicleByLicensePlate(String licensePlate) throws VehicleNotFoundException {
-        try {
-            Optional<Vehicle> vehicleOptional = Optional.ofNullable(vehicleRepository.findByLicensePlate(licensePlate));
-
-            if (vehicleOptional.isPresent()) {
-                Vehicle vehicleEntity = vehicleOptional.get();
-                return objectMapper.convertValue(vehicleEntity, VehicleDTO.class);
-            }
-            log.info("Vehicle with license plate: {} was not found", licensePlate);
-            throw new VehicleNotFoundException("Vehicle with license plate: " + licensePlate + " not found");
-        } catch (Exception ex) {
-            throw new VehicleNotFoundException("Failed to retrieve member: " + ex.getMessage());
-        }
+        return Optional.ofNullable(vehicleRepository.findByLicensePlate(licensePlate))
+                .map(vehicleEntity -> objectMapper.convertValue(vehicleEntity, VehicleDTO.class))
+                .orElseThrow(() -> new VehicleNotFoundException("Vehicle with license plate: " + licensePlate + " not found"));
     }
+
 
     @Override
     public List<VehicleDTO> getVehiclesByParams(String licensePlate, String make, String model, Integer year) {
-        try {
-
-            List<Vehicle> vehicleEntities = vehicleRepository.findVehiclesByParams(licensePlate, make, model, year);
-            return vehicleEntities.stream()
-                    .map(vehicle -> objectMapper.convertValue(vehicle, VehicleDTO.class))
-                    .collect(Collectors.toList());
-        }catch (Exception ex) {
-            log.error("Failed to retrieve vehicle: {}", ex.getMessage());
-            throw new VehicleNotFoundException("Failed to retrieve vehicle: " + ex.getMessage());
-        }
+        return Optional.of(vehicleRepository.findVehiclesByParams(licensePlate, make, model, year))
+                .map(vehicleEntities -> vehicleEntities.stream()
+                        .map(vehicle -> objectMapper.convertValue(vehicle, VehicleDTO.class))
+                        .collect(Collectors.toList()))
+                .orElseThrow(() -> new VehicleNotFoundException("Failed to retrieve vehicles"));
     }
-
     @Override
     public List<VehicleDTO> getAllVehicles() {
-        try {
-            List<Vehicle> vehicleEntityList = vehicleRepository.findAll(Sort.by("licensePlate").ascending());
-            log.info("The list of vehicles was retrieved, count {}", vehicleEntityList.size());
-
-            return vehicleEntityList.stream()
-                    .map(this::mapVehicleToDTOWithMembers)
-                    .toList();
-        } catch (Exception ex) {
-            log.error("Failed to retrieve all vehicles: {}", ex.getMessage());
-            throw new VehicleNotFoundException("Failed to retrieve vehicles: " + ex.getMessage());
-        }
+        return Optional.of(vehicleRepository.findAll(Sort.by("licensePlate").ascending()))
+                .map(vehicleEntityList -> vehicleEntityList.stream()
+                        .map(this::mapVehicleToDTOWithMembers)
+                        .toList())
+                .orElseThrow(() -> new VehicleNotFoundException("Failed to retrieve vehicles"));
     }
     private VehicleDTO mapVehicleToDTOWithMembers(Vehicle vehicle) {
         VehicleDTO vehicleDTO = mapVehicleToDTO(vehicle);
