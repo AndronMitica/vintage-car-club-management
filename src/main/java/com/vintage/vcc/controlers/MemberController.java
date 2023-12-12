@@ -14,7 +14,7 @@ import java.util.Optional;
 
 @Validated
 @RestController
-@RequestMapping("/api/vintage")
+@RequestMapping("/api")
 public class MemberController {
     private final MemberService memberService;
     private final VehicleService vehicleService;

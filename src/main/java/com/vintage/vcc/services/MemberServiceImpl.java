@@ -1,7 +1,6 @@
 package com.vintage.vcc.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vintage.vcc.exceptions.MemberCreateException;
 import com.vintage.vcc.exceptions.MemberNotFoundException;
 import com.vintage.vcc.model.dtos.MemberDTO;
 import com.vintage.vcc.model.dtos.VehicleDTO;
@@ -15,7 +14,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -28,10 +26,10 @@ public class MemberServiceImpl implements MemberService {
     private final ObjectMapper objectMapper;
     private final VehicleService vehicleService;
 
-    public MemberServiceImpl(MemberRepository memberRepository
-            , VehicleRepository vehicleRepository
-            , ObjectMapper objectMapper
-            , VehicleService vehicleService) {
+    public MemberServiceImpl(MemberRepository memberRepository,
+                             VehicleRepository vehicleRepository,
+                             ObjectMapper objectMapper,
+                             VehicleService vehicleService) {
         this.memberRepository = memberRepository;
         this.vehicleRepository = vehicleRepository;
         this.objectMapper = objectMapper;
@@ -39,71 +37,44 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    public MemberDTO createMember(MemberDTO memberDTO) throws MemberCreateException {
-        try {
-            Member memberEntity = objectMapper.convertValue(memberDTO, Member.class);
+    public MemberDTO createMember(MemberDTO memberDTO) {
+        Member memberEntity = objectMapper.convertValue(memberDTO, Member.class);
+        Member memberResponseEntity = memberRepository.save(memberEntity);
+        log.info("Member with id: {} was created", memberResponseEntity.getMemberId());
 
-            Member memberResponseEntity = memberRepository.save(memberEntity);
-            log.info("Member with id: {} was created", memberResponseEntity.getMemberId());
-
-            return objectMapper.convertValue(memberResponseEntity, MemberDTO.class);
-        } catch (Exception ex) {
-            log.error("Failed to create member: {}", ex.getMessage());
-            throw new MemberCreateException("Failed to create member: " + ex.getMessage());
-        }
+        return objectMapper.convertValue(memberResponseEntity, MemberDTO.class);
     }
 
     @Override
-    public MemberDTO getMemberById(Long id) throws MemberNotFoundException {
-        try {
-            Optional<Member> optionalMember = memberRepository.findById(id);
-            if (optionalMember.isPresent()) {
-                Member memberEntity = optionalMember.get();
-                return objectMapper.convertValue(memberEntity, MemberDTO.class);
-            }
-            log.info("Member with id: {} was not found", id);
-            throw new MemberNotFoundException("Member with id: " + id + " not found");
-        } catch (Exception ex) {
-            log.error("Failed to retrieve member: {}", ex.getMessage());
-            throw new MemberNotFoundException("Failed to retrieve member: " + ex.getMessage());
-        }
+    public MemberDTO getMemberById(Long id) {
+        return memberRepository.findById(id)
+                .map(memberEntity -> objectMapper.convertValue(memberEntity, MemberDTO.class))
+                .orElseThrow(() -> new MemberNotFoundException("Member with id: " + id + " not found"));
     }
 
     @Override
-    public MemberDTO updateMemberById(Long id, MemberDTO memberDTO) throws MemberNotFoundException {
-        try {
-            if (memberRepository.findById(id).isPresent()) {
-                memberDTO.setMemberId(id);
-                Member memberEntity = objectMapper.convertValue(memberDTO, Member.class);
-                Member memberResponseEntity = memberRepository.save(memberEntity);
-                log.info("Member with id: {} was updated", memberResponseEntity.getMemberId());
-                return objectMapper.convertValue(memberResponseEntity, MemberDTO.class);
-            }
-            log.info("Member with id: {} was not found", id);
-            return null;
-        } catch (Exception ex) {
-            log.error("Failed to update member: {}", ex.getMessage());
-            throw new MemberNotFoundException("Failed to update member: " + ex.getMessage());
-        }
+    public MemberDTO updateMemberById(Long id, MemberDTO memberDTO) {
+        return memberRepository.findById(id)
+                .map(existingMember -> {
+                    memberDTO.setMemberId(id);
+                    Member updatedMemberEntity = objectMapper.convertValue(memberDTO, Member.class);
+                    Member memberResponseEntity = memberRepository.save(updatedMemberEntity);
+                    log.info("Member with id: {} was updated", memberResponseEntity.getMemberId());
+                    return objectMapper.convertValue(memberResponseEntity, MemberDTO.class);
+                })
+                .orElseThrow(() -> new MemberNotFoundException("Member with id: " + id + " not found"));
     }
 
     @Override
-    public MemberDTO deleteMemberById(Long id) throws MemberNotFoundException {
-        try {
-            Optional<Member> memberEntity = memberRepository.findById(id);
-
-            if (memberEntity.isPresent()) {
-                MemberDTO memberDTO = objectMapper.convertValue(memberEntity, MemberDTO.class);
-                memberRepository.deleteById(id);
-                log.info("Member with id: {} was deleted", id);
-                return memberDTO;
-            }
-            log.info("Member with id: {} was not founded", id);
-            return null;
-        } catch (Exception ex) {
-            log.error("Failed to delete member: {}", ex.getMessage());
-            throw new MemberNotFoundException("Failed to delete member: " + ex.getMessage());
-        }
+    public MemberDTO deleteMemberById(Long id) {
+        return memberRepository.findById(id)
+                .map(memberEntity -> {
+                    MemberDTO memberDTO = objectMapper.convertValue(memberEntity, MemberDTO.class);
+                    memberRepository.deleteById(id);
+                    log.info("Member with id: {} was deleted", id);
+                    return memberDTO;
+                })
+                .orElseThrow(() -> new MemberNotFoundException("Member with id: " + id + " not found"));
     }
 
     @Override
@@ -111,7 +82,6 @@ public class MemberServiceImpl implements MemberService {
         Member memberEntity = memberRepository.findById(id)
                 .orElseThrow(() -> new MemberNotFoundException("Member not found"));
         Vehicle vehicleEntity = vehicleRepository.findByLicensePlate(licensePlate);
-
         memberEntity.getVehicles().add(vehicleEntity);
         vehicleEntity.getOwners().add(memberEntity);
 
@@ -120,27 +90,19 @@ public class MemberServiceImpl implements MemberService {
     }
 
     public List<MemberDTO> getAllMembers() {
-        try {
-            List<Member> membersEntityList = memberRepository.findAll(Sort.by("memberId"));
-            log.info("The list of members was retrieved, count {}", membersEntityList.size());
-
-            return membersEntityList.stream()
-                    .map(this::mapMemberToDTOWithVehicles)
-                    .toList();
-        } catch (Exception ex) {
-            log.error("Failed to retrieve all members: {}", ex.getMessage());
-            throw new MemberNotFoundException("Failed to retrieve members: " + ex.getMessage());
-        }
+        return memberRepository.findAll(Sort.by("memberId"))
+                .stream()
+                .map(this::mapMemberToDTOWithVehicles)
+                .toList();
     }
 
     private MemberDTO mapMemberToDTOWithVehicles(Member member) {
-        MemberDTO memberDTO = mapMemberToDTO(member); // Map basic member details
+        MemberDTO memberDTO = mapMemberToDTO(member);
 
-        List<VehicleDTO> vehicleDTOs = mapVehiclesToDTOs(member.getVehicles()); // Map vehicles to DTOs
-        memberDTO.setVehicles(vehicleDTOs); // Set the vehicles in the MemberDTO
+        List<VehicleDTO> vehicleDTOs = mapVehiclesToDTOs(member.getVehicles());
+        memberDTO.setVehicles(vehicleDTOs);
         return memberDTO;
     }
-
 
     private MemberDTO mapMemberToDTO(Member member) {
         MemberDTO memberDTO = new MemberDTO();
