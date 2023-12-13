@@ -28,7 +28,7 @@ public class VehicleController {
         return vehicleService.getAllVehicles();
     }
 
-    @PutMapping("/vehicles/{licensePlate}")
+    @PatchMapping("/vehicles/{licensePlate}")
     public ResponseEntity<VehicleDTO> updateVehicleByLicensePlate(
             @PathVariable @Valid String licensePlate,
             @RequestBody @Valid VehicleDTO vehicleDTO) {

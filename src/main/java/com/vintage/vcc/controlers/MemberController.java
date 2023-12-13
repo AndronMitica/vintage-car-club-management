@@ -41,7 +41,7 @@ public class MemberController {
         return ResponseEntity.ok(memberService.getMemberById(id));
     }
 
-    @PutMapping("/members/{id}")
+    @PatchMapping("/members/{id}")
     public ResponseEntity<MemberDTO> updateMemberById(@PathVariable @Valid Long id, @RequestBody @Valid MemberDTO memberDTO) {
         Optional<MemberDTO> memberDTOResponse = Optional.ofNullable(memberService.updateMemberById(id, memberDTO));
         return memberDTOResponse
